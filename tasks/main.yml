@@ -170,6 +170,6 @@
 - name: Add KUBECONFIG env for admin.conf to .bashrc
   become: true
   lineinfile:
-    dest: "/home/{{ kubectl_user }}/.kube/admin.conf"
+    dest: "/home/{{ kubectl_user }}/.bashrc"
     regexp: "KUBECONFIG"
     line: "export KUBECONFIG=/home/{{ kubectl_user }}/.kube/admin.conf"
