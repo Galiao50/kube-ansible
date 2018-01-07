@@ -53,8 +53,8 @@
 - name: Create kube repo
   become: true
   template:
-    src: kubenetes.repo.j2
-    dest: /etc/yum.repos.d/kubenetes.repo
+    src: kubernetes.repo.j2
+    dest: /etc/yum.repos.d/kubernetes.repo
 
 - name: Default kube version fact
   set_fact:
@@ -158,7 +158,7 @@
 - name: Copy admin.conf to kuberctl_user home
   become: true
   shell: >
-    cp -f /etc/kubenetes/admin.conf /home/{{ kubectl_user }}/.kube/admin.conf
+    cp -f /etc/kubernetes/admin.conf /home/{{ kubectl_user }}/.kube/admin.conf
 
 - name: Set admin.conf ownership
   become: true
