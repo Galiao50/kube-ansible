@@ -1,0 +1,175 @@
+---
+#- name: Install dependency packages
+#  become: true
+#  package:
+#    name: "{{ item.name }}"
+#    state: present
+#  with_items:
+#    - { name: git }
+#    - { name: wget }
+#
+#- name: Install docker ce repo
+#  become: true
+#  shell: >
+#    wget https://download.docker.com/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
+#
+#- name: Install Docker
+#  become: true
+#  package:
+#    name: docker-ce
+#    state: present
+
+- name: Create docker repo
+  template:
+    src: docker.repo.j2
+    dest: /etc/yum.repos.d/docker.repo
+
+- name: Install Docker
+  become: true
+  package:
+    name: docker-engine
+    state: present
+
+- name: Enable & start docker service
+  become: true
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Disable selinux
+  become: true
+  selinux:
+    state: disabled
+
+- name: Disable & stop iptables
+  become: true
+  service:
+    name: firewalld
+    state: stopped
+    enabled: no
+  ignore_errors: yes
+
+- name: Create kube repo
+  become: true
+  template:
+    src: kubenetes.repo.j2
+    dest: /etc/yum.repos.d/kubenetes.repo
+
+- name: Default kube version fact
+  set_fact:
+    kube_version_parameter: ""
+
+- name: Set kube version fact
+  set_fact:
+    kube_version_parameter: "-{{ kube_version }}"
+  when: kube_version != "latest"
+
+- name: Install kube packages
+  become: true
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - kubectl{{ kube_version_parameter }}
+    - kubeadm{{ kube_version_parameter }}
+    - kubelet{{ kube_version_parameter }}
+
+- name: Set bridge-nf-call-iptables to 1
+  become: true
+  sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: 1
+    sysctl_set: yes
+    state: present
+
+- name: Set bridge-nf-call-ip6tables to 1
+  become: true
+  sysctl:
+    name: net.bridge.bridge-nf-call-ip6tables
+    value: 1
+    sysctl_set: yes
+    state: present
+
+- name: Default pod-network-cidr fact
+  set_fact:
+    arg_pod_network: ""
+
+- name: Set pod-network-cird fact
+  set_fact:
+    arg_pod_network: "--pod-network-cidr {{ pod_network_cidr }}/16"
+  when: pod_network_cidr != "weave"
+
+- name: Disable swap
+  become: true
+  shell: >
+    swapoff -a
+  ignore_errors: true
+
+- name: Remove default kubeadm.conf ExecStart
+  lineinfile:
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    regexp: 'KUBELET_EXTRA_ARGS$'
+    state: absent
+
+- name: Add custom kubeadm.conf ExecStart
+  lineinfile:
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    regexp: 'systemd$'
+    line: 'ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_SYSTEM_PODS_ARGS $KUBELET_NETWORK_ARGS $KUBELET_DNS_ARGS $KUBELET_AUTHZ_ARGS $KUBELET_EXTRA_ARGS --cgroup-driver=cgroupfs'
+
+- name: Reset kubeadm
+  become: true
+  shell: >
+    kubeadm reset
+  ignore_errors: yes
+
+- name: Run kubeadm init & save log
+  become: true
+  shell: >
+    kubeadm init {{ arg_pod_network }} > /var/log/kubeadm-init.log
+  args:
+    creates: /etc/.kubeadm-init-complete
+
+- name: add kubectl_group
+  become: true
+  group:
+    name: "{{ kubectl_group }}"
+    state: present
+
+- name: add kubectl_user
+  become: true
+  user:
+    name: "{{ kubectl_user }}"
+    comment: "kubectl user"
+    shell: "/bin/bash"
+    home: "/home/{{ kubectl_user }}"
+    group: "{{ kubectl_group }}"
+
+- name: Create .kube folder
+  become: true
+  file:
+    path: "/home/{{ kubectl_user }}/.kube/"
+    state: directory
+    owner: "{{ kubectl_user }}"
+    group: "{{ kubectl_group }}"
+    mode: 0755
+
+- name: Copy admin.conf to kuberctl_user home
+  become: true
+  shell: >
+    cp -f /etc/kubenetes/admin.conf /home/{{ kubectl_user }}/.kube/admin.conf
+
+- name: Set admin.conf ownership
+  become: true
+  file:
+    path: "/home/{{ kubectl_user }}/.kube/admin.conf"
+    owner: "{{ kubectl_user }}"
+    group: "{{ kubectl_group }}"
+
+- name: Add KUBECONFIG env for admin.conf to .bashrc
+  become: true
+  lineinfile:
+    dest: "/home/{{ kubectl_user }}/.kube/admin.conf"
+    regexp: "KUBECONFIG"
+    line: "export KUBECONFIG=/home/{{ kubectl_user }}/.kube/admin.conf"

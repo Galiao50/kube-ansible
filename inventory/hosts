@@ -1,0 +1,7 @@
+kube-master ansible_host=10.8.125.27
+
+[master]
+kube-master
+
+[master:vars]
+ansible_ssh_user=root

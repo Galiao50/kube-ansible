@@ -1,0 +1,7 @@
+kube_baseurl: http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+kube_version: "latest"
+
+kubectl_user: "kubectl"
+kubectl_group: "kubectl_group"
+
+pod_network_cidr: "10.10.0.0"
