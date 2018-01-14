@@ -115,8 +115,14 @@
 - name: Add custom kubeadm.conf ExecStart
   lineinfile:
     dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-    regexp: 'ExecStart=.*'
+    regexp: 'ExecStart=/usr/bin/kubelet .*'
     line: 'ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_SYSTEM_PODS_ARGS $KUBELET_NETWORK_ARGS $KUBELET_DNS_ARGS $KUBELET_AUTHZ_ARGS $KUBELET_EXTRA_ARGS --cgroup-driver=cgroupfs'
+
+- name: Reload kubelet service
+  systemd:
+    name: kubelet
+    state: restarted
+    daemon_reload: yes
 
 - name: Reset kubeadm
   become: true
@@ -173,3 +179,18 @@
     dest: "/home/{{ kubectl_user }}/.bashrc"
     regexp: "KUBECONFIG"
     line: "export KUBECONFIG=/home/{{ kubectl_user }}/.kube/admin.conf"
+
+- name: Install pod network
+  become: true
+  shell: >
+    kubectl apply --kubeconfig /home/{{ kubectl_user }}/.kube/admin.conf -f {{ pod_network_config }}
+
+- name: Install kube dashboard
+  become: true
+  shell: >
+    kubectl apply --kubeconfig /home/{{ kubectl_user }}/.kube/admin.conf -f {{ kube_dashboard_config }}
+
+#- name: Run kube proxy
+#  become: true
+#  shell: >
+#    kubectl proxy --kubeconfig /home/{{ kubectl_user }}/.kube/admin.conf --address={{ ansible_default_ipv4.address }} --port='9999' --accept-hosts '.*' &

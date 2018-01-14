@@ -1,7 +1,10 @@
-kube_baseurl: http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+kube_baseurl: "http://yum.kubernetes.io/repos/kubernetes-el7-x86_64"
+kube_dashboard_config: "https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml"
 kube_version: "latest"
 
 kubectl_user: "kubectl"
 kubectl_group: "kubectl_group"
 
+
 pod_network_cidr: "10.10.0.0"
+pod_network_config: "https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml"
