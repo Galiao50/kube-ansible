@@ -162,6 +162,14 @@
     home: "/home/{{ kubectl_user }}"
     group: "{{ kubectl_group }}"
 
+- name: add kubectl_user in sudoers list
+  become: true
+  lineinfile:
+    path: "/etc/sudoers.d/{{ kubectl_user }}"
+    create: yes
+    state: present
+    line: "{{ kubectl_user }} ALL=(root) NOPASSWD:ALL"
+
 - name: Create .kube folder
   become: true
   file:
