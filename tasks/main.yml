@@ -24,6 +24,16 @@
     src: docker.repo.j2
     dest: /etc/yum.repos.d/docker.repo
 
+- name: Remove docker(-client|-common)
+  package:
+    name: "{{ item.name }}"
+    state: absent
+  with_items:
+    - { name: docker }
+    - { name: docker-common }
+    - { name: docker-client }
+  ignore_errors: true
+
 - name: Install Docker
   become: true
   package:
