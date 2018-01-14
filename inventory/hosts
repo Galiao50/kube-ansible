@@ -1,4 +1,4 @@
-kube-master ansible_host=10.8.125.27
+kube-master ansible_host=192.168.5.231
 
 [master]
 kube-master
